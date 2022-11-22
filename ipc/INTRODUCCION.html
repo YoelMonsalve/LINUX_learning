@@ -1066,16 +1066,88 @@ body .markdown-body
 .highlight .vi{color:teal}
 .highlight .il{color:#009999}
 .highlight .gc{color:#999;background-color:#EAF2F5}
-</style><title>README_ES</title></head><body><article class="markdown-body"><h1 id="ipc-interprocess-comunication">IPC - [I]nter[P]rocess [C]omunication<a class="headerlink" href="#ipc-interprocess-comunication" title="Permanent link"></a></h1>
-<p>El t&rsquo;ermino IPC se refiere a los mecanismos de comunicaci&rsquo;on entre distintos procesos que conviven dentro de un mismo sistema. Este tema est&rsquo;a t&rsquo;ecnicamente explicado en el material <sup id="fnref:IPC_DOC_EN"><a class="footnote-ref" href="#fn:IPC_DOC_EN">1</a></sup>, <sup id="fnref:IPC_DOC_ES"><a class="footnote-ref" href="#fn:IPC_DOC_ES">2</a></sup> (cap&rsquo;itulo 6), por lo tanto lo que busco es presentarlo de manera did&rsquo;actica</p>
+</style><title>INTRODUCCION</title></head><body><article class="markdown-body"><h1 id="ipc-interprocess-comunication">IPC - [I]nter[P]rocess [C]omunication<a class="headerlink" href="#ipc-interprocess-comunication" title="Permanent link"></a></h1>
+<p>El t&rsquo;ermino IPC se refiere a los mecanismos de comunicaci&rsquo;on entre distintos procesos que conviven dentro de un mismo sistema. Este tema est&rsquo;a t&rsquo;ecnicamente explicado en el material <sup id="fnref:IPC_DOC_EN"><a class="footnote-ref" href="#fn:IPC_DOC_EN">1</a></sup> <sup id="fnref:IPC_DOC_ES"><a class="footnote-ref" href="#fn:IPC_DOC_ES">2</a></sup> (cap&rsquo;itulo 6), por lo tanto lo que busco es presentarlo de manera did&rsquo;actica.</p>
+<p>En un sistema (computador) de la vida real todo se desarrolla a trav&rsquo;es de procesos. Un &lsquo;<em>proceso</em>&lsquo; es una tarea b&rsquo;asica desarrollada por el sistema operativo (SO). Cada vez que abrimos el procesador de texto, una ventana del navegador web, etc, el SO &lsquo;<em>genera</em>&lsquo; o engendra (<code>spawn</code>) un proceso. Por lo tanto, los procesos son las entidades que hacen vida dentro del sistema. </p>
+<p>Pero estos procesos necesitan comunicarse entre si, de otro modo no podr&rsquo;ia llevarse a cabo ninguna actividad realmente &lsquo;<em>importante</em>&lsquo; en la vida real. Por ejemplo, en una aplicaci&rsquo;on que resguarde informaci&rsquo;on en una Base de Datos (como cualquier sistema de backend t&rsquo;ipico de una p&rsquo;agina web), tenemos como m&rsquo;inimo un primer proceso interactuando con el usuario, y recibiendo las peticiones de &lsquo;este (por ejemplo escrito en PHP), pero que delega el manejo de la informaci&rsquo;on en otra aplicaci&rsquo;on especializada como MySQL. </p>
+<p>Los procesos se pueden comunicar entre si mediante (a) <em>Sockets</em>, y (b) mecanismos IPC de System V. Los sockets no ser&rsquo;an objeto de estudio en este material, aunque s&rsquo;i los IPC. Estos &lsquo;ultimos se dividen en:</p>
+<ul>
+<li>Colas de mensajes (<strong>m</strong>e<strong>s</strong>sage-<strong>q</strong>ueues, o <code>msq</code>)</li>
+<li>Sem&rsquo;aforos (<strong>sem</strong>aphores, o <code>sem</code>)</li>
+<li>Segmentos de memoria compartida (<strong>sh</strong>ared-<strong>m</strong>emory, o <code>shm</code>)</li>
+</ul>
+<p>Ahora bien, debe existir una identificaci&rsquo;on &lsquo;unica para cada canal de comunicaci&rsquo;on abierto entre dos procesos. Es decir, si el proceso A abre una cola para enviar mensajes al proceso B, debe existir una manera en que el receptor B pueda reconocer los mensajes que provienen de su emisor A, y no otros. O incluso, en caso de que existan varias colas abiertas entre dos procesos, debe haber una manera de identificar cada objeto IPC de manera &lsquo;unica. </p>
+<p>Para este respecto, existe lo que se conoce como <strong>clave IPC</strong>, generada con la funci&rsquo;on <code>ftok</code> de la que hablaremos en la secci&rsquo;on siguiente. En el libro de <sup id="fnref2:IPC_DOC_EN"><a class="footnote-ref" href="#fn:IPC_DOC_EN">1</a></sup> se dice que la clave es como el an&rsquo;alogo al n&rsquo;umero telef&rsquo;onico que discamos cuando intentamos hacer una llamada con otra persona. </p>
+<h2 id="claves-de-ipc">Claves de IPC<a class="headerlink" href="#claves-de-ipc" title="Permanent link"></a></h2>
+<p>La clave es el identificador del mecanismo IPC, e idealmente deber&rsquo;ia haber una clave &lsquo;unica por cada IPC creado. De otro modo, la informaci&rsquo;on transmitida por un objecto IPC, se confundir&rsquo;ia con la informaci&rsquo;on proveniente de otro.</p>
+<p>Para generar una clave, se utiliza la funci&rsquo;on <code>ftok()</code>, cuyo prototipo es:</p>
+<div class="highlight"><pre>#include &lt;sys/types.h&gt;
+#include &lt;sys/ipc.h&gt;
+
+key_t ftok(const char *pathname, int proj_id);
+</pre></div>
+
+<p>Aqu&rsquo;i queremos aprovechar para comentar las formas en que, al menos a mi gusto, se puede buscar documentaci&rsquo;on de alguna funci&rsquo;on o procedimiento en Linux.</p>
+<ul>
+<li>El <em>manual</em> de Linux, o manpage: teclear <code>man ftok</code> en consola. Esto dar&rsquo;a la vesi&rsquo;on Linux.</li>
+<li>El sitio de ayuda de <strong>Open Group</strong>: <a href="https://pubs.opengroup.org/onlinepubs/007904975/functions/ftok.html">ftok</a>, el cual normalmente describe la versi&rsquo;on POSIX, conforme a IEEE. Por lo tanto, se puede considerar una versi&rsquo;on bastante estandarizada de la funci&rsquo;on buscada.</li>
+<li>El sitio de <strong>Linux Die</strong>: <a href="https://linux.die.net/man/3/ftok">ftok</a>, que normalmente describir&rsquo;a la versi&rsquo;on POSIX igualmente.</li>
+<li>Opcionalmente, el sitio de ayuda de <strong>IBM</strong>: <a href="https://www.ibm.com/docs/en/zos/2.3.0?topic=functions-ftok-generate-interprocess-communication-ipc-key">ftok</a> el cual he descubierto contiene excelente documentaci&rsquo;on y ejemplos. Aunque pueden incluir la definici&rsquo;on de ciertas macros, como en este caso <code>_XOPEN_SOURCE_EXTENDED 1</code>, no necesariamente las mismas incluidas en las versiones POSIX m&rsquo;as actualizadas.</li>
+</ul>
+<p>En lo personal, cada vez que se vaya a investigar un tema Linux, recomiendo buscar de ser posible fuentes <em>oficiales</em>, de buena reputaci&rsquo;on, comenzando por supuesto por las p&rsquo;aginas del manual (<em>manpages</em>), y luego sitios reconocidos como p&rsquo;aginas de empresa (Microsoft, IBM), o foros como StackOverflow, GeekforKeeks, etc.</p>
+<p>Es bueno buscar en fuentes <em>diversas</em>, variadas, comparar la informaci&rsquo;on obtenida entre ellas, y probar en nuestra propia versi&rsquo;on de sistema operativo los ejemplos suministrados, hacer cambios en los ejemplos y ver los resultados, crear nuestros propios ejemplo, etc.; esta es la mejor manera de aprender.</p>
+<p>Volviendo al caso de la funci&rsquo;on <code>ftok</code></p>
+<div class="highlight"><pre>#include &lt;sys/types.h&gt;
+#include &lt;sys/ipc.h&gt;
+
+key_t ftok(const char *pathname, int proj_id);
+</pre></div>
+
+<p>nos dice en primer lugar que debemos incluir los ficheros de cabecera <code>&lt;sys/types.h</code>, y <code>&lt;sys/ipc.h&gt;</code> antes de invocar una llamada a <code>ftok</code> (es decir, incluir esta funci&rsquo;on en nuestro c&rsquo;odigo). Estas cabeceras contendr&rsquo;an definiciones que <code>ftok</code> utiliza, adem&rsquo;as del prototipo de la misma <code>ftok</code>, y de no incluir dichas cabeceras, el compilador posiblemente de un error.</p>
+<p>La idea de <code>ftok</code> es generar una clave &lsquo;unica por directorio de trabajo e identificador de proyecto. El argumento <code>path</code> deber&rsquo;ia ser la ruta del directorio donde se encuentre nuestro programa que utiliza IPC&rsquo;s, el cual como dice el <em>manpage</em> debe referirse a una ruta existente y accesible:</p>
+<blockquote>
+<p><em>The  <code>ftok()</code>  function uses the identity of the file named by the given pathname (which must refer to an existing, accessible file) &hellip;</em></p>
+</blockquote>
+<p>El argumento <code>proj_id</code> o &ldquo;identificador de proyecto&rdquo; es un codigo num&rsquo;erico cuyos 8 bits menos significativos deben ser distintos de cero, e identifica una aplicaci&rsquo;on dentro de un directorio de trabajo. Es decir, mediante la combinaci&rsquo;on</p>
+<div class="highlight"><pre>pathname + proj_id
+</pre></div>
+
+<p>podemos tener varios sistemas IPC, desde un mismo directorio de trabajo, cada uno de las cuales dispondr&rsquo;a de una cola de mensajes, un sem&rsquo;aforo y un segmento de memoria compartida. Si se desean varios IPC para una misma aplicaci&rsquo;on, se deben combinar distintos <code>proj_id</code> con el mismo <code>pathname</code>.</p>
+<p><em>NOTA</em>: En versiones antiguas, el <code>proj_id</code> era definido de tipo <code>char</code>, y por razones de compatibilidad en la actualidad se declara <code>int</code> pero solamente son tomados los 8 bits menos significativos.</p>
+<p>El <code>pathname</code> puede ser un nombre simb&rsquo;olico como <code>'.'</code>, que la librer&rsquo;ia resolver&rsquo;a a la ruta del directorio desde donde se haya lanzado la aplicaci&rsquo;on. Incluso, puede ser un enlace simb&rsquo;olico, que igualmente ser&rsquo;a resuelto a la ruta definitiva.</p>
+<p>La <em>colisi&rsquo;on</em> ocurre cuando dos claves que deber&rsquo;ian ser diferentes resultan ser iguales. Por ejemplo, el <em>manpage</em> especifica que dos <code>pathname</code> diferentes pudieran producir la misma clave, ya que se utiliza el n&rsquo;umero de <code>inodo</code> en lugar del nombre. Esto podr&rsquo;ia pasar por ejemplo con <code>"/dev/hda1"</code>, y <code>"/dev/sda1"</code>. O, si se usan enlaces simb&rsquo;olicos que apuntan al mismo directorio.</p>
+<p>Para resolver la colisi&rsquo;on, una aplicaci&rsquo;on bien dise~nada podr&rsquo;ia por ejemplo almacenar las claves previamente generadas, comparar con ellas, e intentar generar otra clave. </p>
+<p>En caso de &lsquo;exito, la funci&rsquo;on <code>ftok()</code> devuelve la clave generada de tipo <code>key_t</code> (un valor num&rsquo;erico). En caso de error, devuelve -1 y el el c&rsquo;odigo de error es almacenado en la variable global <code>errno</code> (por lo que puede usarse <code>perror()</code> para imprimir un mensaje de error). </p>
+<p>La p&rsquo;agina de OpenGroup (<a href="https://pubs.opengroup.org/onlinepubs/007904975/functions/ftok.html">https://pubs.opengroup.org/onlinepubs/007904975/functions/ftok.html</a>) establece que debe devolver obligatoriamente los siguientes errores, en las siguientes situaciones:</p>
+<dl>
+<dt>[EACCES]</dt>
+<dd>Search permission is denied for a component of the path prefix.
+<strong>Traducci&rsquo;on</strong>: <em>alg&rsquo;un componente de la ruta especificada en el argumento no puede resolverse por falta de los permisos necesarios [como <code>rx</code>]</em>.</dd>
+<dt>[ELOOP]</dt>
+<dd>A loop exists in symbolic links encountered during resolution of the path argument. <strong>Traducci&rsquo;on</strong>: <em>la resoluci&rsquo;on de la ruta contiene un enlace simb&rsquo;olico que conduce a un ciclo infinito [un enlace que apunta a si mismo, o a un directorio que contiene al mismo enlace]</em>.</dd>
+<dt>[ENAMETOOLONG]</dt>
+<dd>The length of the path argument exceeds <code>{PATH_MAX}</code> or a pathname component is longer than <code>{NAME_MAX}</code>. <strong>Traducci&rsquo;on</strong>: <em>la ruta, o un componente de la misma, es demasiado largo(a)</em>.</dd>
+<dt>[ENOENT]</dt>
+<dd>A component of path does not name an existing file or path is an empty string. <strong>Traducci&rsquo;on</strong>: <em>la ruta es vac&rsquo;ia, o un componente de la misma no existe</em>.</dd>
+<dt>[ENOTDIR]</dt>
+<dd>A component of the path prefix is not a directory. <strong>Traducci&rsquo;on</strong>: <em>un prefijo de la ruta no es un directorio</em>.</dd>
+</dl>
+<p>Adicionalmente, la funci&rsquo;on <code>ftok()</code> <em>puede</em> fallar en las siguiente situaciones:</p>
+<p>The ftok() function may fail if:</p>
+<dl>
+<dt>[ELOOP]</dt>
+<dd>More than `{SYMLOOP_MAX}`` symbolic links were encountered during resolution of the path argument. <strong>Traducci&rsquo;on</strong>: <em>demasiados enlaces simb&rsquo;olicos en la resoluci&rsquo;on de la ruta.</em></dd>
+<dt>[ENAMETOOLONG]</dt>
+<dd>Pathname resolution of a symbolic link produced an intermediate result whose length exceeds <code>{PATH_MAX}</code>.  <strong>Traducci&rsquo;on</strong>: <em>la ruta es un enlace simb&rsquo;olico cuya resoluci&rsquo;on contiene un componente que es demasiado largo</em>.</dd>
+</dl>
 <div class="footnote">
 <hr />
 <ol>
 <li id="fn:IPC_DOC_EN">
-<p><a href="https://tldp.org/LDP/lpg-0.4.pdf#chapter.6%21">https://tldp.org/LDP/lpg-0.4.pdf#chapter.6%21</a>&#160;<a class="footnote-backref" href="#fnref:IPC_DOC_EN" title="Jump back to footnote 1 in the text">&#8617;</a></p>
+<p><a href="https://tldp.org/LDP/lpg-0.4.pdf#chapter.6%21">The Linux Programmer&rsquo;s Guide</a>&#160;<a class="footnote-backref" href="#fnref:IPC_DOC_EN" title="Jump back to footnote 1 in the text">&#8617;</a><a class="footnote-backref" href="#fnref2:IPC_DOC_EN" title="Jump back to footnote 1 in the text">&#8617;</a></p>
 </li>
 <li id="fn:IPC_DOC_ES">
-<p><a href="https://www.academia.edu/24622349/Gu%C3%ADa_Linux_de_Programaci%C3%B3n_GULP">https://www.academia.edu/24622349/Gu%C3%ADa_Linux_de_Programaci%C3%B3n_GULP</a>&#160;<a class="footnote-backref" href="#fnref:IPC_DOC_ES" title="Jump back to footnote 2 in the text">&#8617;</a></p>
+<p><a href="https://www.academia.edu/24622349/Gu%C3%ADa_Linux_de_Programaci%C3%B3n_GULP">Guia del Programador en Linux</a>&#160;<a class="footnote-backref" href="#fnref:IPC_DOC_ES" title="Jump back to footnote 2 in the text">&#8617;</a></p>
 </li>
 </ol>
 </div></article></body></html>
