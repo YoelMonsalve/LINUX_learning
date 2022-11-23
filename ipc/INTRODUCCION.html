@@ -1118,28 +1118,48 @@ key_t ftok(const char *pathname, int proj_id);
 <p>La <em>colisi&rsquo;on</em> ocurre cuando dos claves que deber&rsquo;ian ser diferentes resultan ser iguales. Por ejemplo, el <em>manpage</em> especifica que dos <code>pathname</code> diferentes pudieran producir la misma clave, ya que se utiliza el n&rsquo;umero de <code>inodo</code> en lugar del nombre. Esto podr&rsquo;ia pasar por ejemplo con <code>"/dev/hda1"</code>, y <code>"/dev/sda1"</code>. O, si se usan enlaces simb&rsquo;olicos que apuntan al mismo directorio.</p>
 <p>Para resolver la colisi&rsquo;on, una aplicaci&rsquo;on bien dise~nada podr&rsquo;ia por ejemplo almacenar las claves previamente generadas, comparar con ellas, e intentar generar otra clave. </p>
 <p>En caso de &lsquo;exito, la funci&rsquo;on <code>ftok()</code> devuelve la clave generada de tipo <code>key_t</code> (un valor num&rsquo;erico). En caso de error, devuelve -1 y el el c&rsquo;odigo de error es almacenado en la variable global <code>errno</code> (por lo que puede usarse <code>perror()</code> para imprimir un mensaje de error). </p>
-<p>La p&rsquo;agina de OpenGroup (<a href="https://pubs.opengroup.org/onlinepubs/007904975/functions/ftok.html">https://pubs.opengroup.org/onlinepubs/007904975/functions/ftok.html</a>) establece que debe devolver obligatoriamente los siguientes errores, en las siguientes situaciones:</p>
+<p>La p&rsquo;agina de <a href="https://pubs.opengroup.org/onlinepubs/007904975/functions/ftok.html">OpenGroup</a> establece que debe devolver obligatoriamente los siguientes errores, en las siguientes situaciones:</p>
 <dl>
 <dt>[EACCES]</dt>
-<dd>Search permission is denied for a component of the path prefix.
-<strong>Traducci&rsquo;on</strong>: <em>alg&rsquo;un componente de la ruta especificada en el argumento no puede resolverse por falta de los permisos necesarios [como <code>rx</code>]</em>.</dd>
+<dd>Search permission is denied for a component of the path prefix.</dd>
+<dd>[<strong>Traducción</strong>] <em>Alg&rsquo;un componente de la ruta especificada en el argumento no puede resolverse por falta de los permisos necesarios (como <code>rx</code>, por ejemplo)</em>.</dd>
 <dt>[ELOOP]</dt>
-<dd>A loop exists in symbolic links encountered during resolution of the path argument. <strong>Traducci&rsquo;on</strong>: <em>la resoluci&rsquo;on de la ruta contiene un enlace simb&rsquo;olico que conduce a un ciclo infinito [un enlace que apunta a si mismo, o a un directorio que contiene al mismo enlace]</em>.</dd>
+<dd>A loop exists in symbolic links encountered during resolution of the path argument. </dd>
+<dd>[<strong>Traducción</strong>] <em>La resoluci&rsquo;on de la ruta contiene un enlace simb&rsquo;olico que conduce a un ciclo infinito (un enlace que apunta a si mismo, o a un directorio que contiene al mismo enlace)</em>.</dd>
 <dt>[ENAMETOOLONG]</dt>
-<dd>The length of the path argument exceeds <code>{PATH_MAX}</code> or a pathname component is longer than <code>{NAME_MAX}</code>. <strong>Traducci&rsquo;on</strong>: <em>la ruta, o un componente de la misma, es demasiado largo(a)</em>.</dd>
+<dd>The length of the path argument exceeds <code>{PATH_MAX}</code> or a pathname component is longer than <code>{NAME_MAX}</code>. </dd>
+<dd>[<strong>Traducción</strong>] <em>la ruta, o un componente de la misma, es demasiado largo(a)</em>.</dd>
 <dt>[ENOENT]</dt>
-<dd>A component of path does not name an existing file or path is an empty string. <strong>Traducci&rsquo;on</strong>: <em>la ruta es vac&rsquo;ia, o un componente de la misma no existe</em>.</dd>
+<dd>A component of path does not name an existing file or path is an empty string. </dd>
+<dd>[<strong>Traducción</strong>] <em>la ruta es vac&rsquo;ia, o un componente de la misma no existe</em>.</dd>
 <dt>[ENOTDIR]</dt>
-<dd>A component of the path prefix is not a directory. <strong>Traducci&rsquo;on</strong>: <em>un prefijo de la ruta no es un directorio</em>.</dd>
+<dd>A component of the path prefix is not a directory. </dd>
+<dd>[<strong>Traducción</strong>] <em>un prefijo de la ruta no es un directorio</em>.</dd>
 </dl>
 <p>Adicionalmente, la funci&rsquo;on <code>ftok()</code> <em>puede</em> fallar en las siguiente situaciones:</p>
-<p>The ftok() function may fail if:</p>
 <dl>
 <dt>[ELOOP]</dt>
-<dd>More than `{SYMLOOP_MAX}`` symbolic links were encountered during resolution of the path argument. <strong>Traducci&rsquo;on</strong>: <em>demasiados enlaces simb&rsquo;olicos en la resoluci&rsquo;on de la ruta.</em></dd>
+<dd>More than <code>{SYMLOOP_MAX}</code> symbolic links were encountered during resolution of the path argument. </dd>
+<dd>[<strong>Traducción</strong>] <em>demasiados enlaces simb&rsquo;olicos en la resoluci&rsquo;on de la ruta.</em></dd>
 <dt>[ENAMETOOLONG]</dt>
-<dd>Pathname resolution of a symbolic link produced an intermediate result whose length exceeds <code>{PATH_MAX}</code>.  <strong>Traducci&rsquo;on</strong>: <em>la ruta es un enlace simb&rsquo;olico cuya resoluci&rsquo;on contiene un componente que es demasiado largo</em>.</dd>
+<dd>Pathname resolution of a symbolic link produced an intermediate result whose length exceeds <code>{PATH_MAX}</code>. </dd>
+<dd>[<strong>Traducción</strong>] <em>la ruta es un enlace simb&rsquo;olico cuya resoluci&rsquo;on contiene un componente que es demasiado largo</em>.</dd>
 </dl>
+<p>Una buena pr&rsquo;actica de programaci&rsquo;on deber&rsquo;ia contemplar estas situaciones y manejar los errores adecuadamente, por ejemplo mediante <code>switch/case</code>, o <code>if/else</code>.</p>
+<h3 id="un-ejemplo-sencillo">Un ejemplo sencillo.<a class="headerlink" href="#un-ejemplo-sencillo" title="Permanent link"></a></h3>
+<p>Como primer ejemplo, vamos a generar una clave IPC por medio de varios m&rsquo;etodos:</p>
+<ol>
+<li>poniendo <code>path</code> como un directorio existente </li>
+<li>poniendo <code>path</code> como un directorio que no exista</li>
+<li>poniendo <code>path</code> como la concatenaci&rsquo;on de un directorio existente, y un archivo que no existe dentro de &lsquo;el.</li>
+<li>poniendo <code>path</code> como una ruta v&rsquo;alida, pero sin los necesarios permisos de lectura</li>
+<li>poniendo <code>path</code> como el directorio actual, por medio de tres maneras diferentes:<ul>
+<li>escribiendo <code>"."</code></li>
+<li>usando la funci&rsquo;on GNU <code>get_current_dir_name</code></li>
+<li>usando la funcion POSIX <code>getcwd</code></li>
+</ul>
+</li>
+</ol>
 <div class="footnote">
 <hr />
 <ol>

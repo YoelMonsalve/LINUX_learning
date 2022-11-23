@@ -78,33 +78,95 @@ Para resolver la colisi'on, una aplicaci'on bien dise~nada podr'ia por ejemplo a
 
 En caso de 'exito, la funci'on `ftok()` devuelve la clave generada de tipo `key_t` (un valor num'erico). En caso de error, devuelve -1 y el el c'odigo de error es almacenado en la variable global `errno` (por lo que puede usarse `perror()` para imprimir un mensaje de error). 
 
-La p'agina de OpenGroup (https://pubs.opengroup.org/onlinepubs/007904975/functions/ftok.html) establece que debe devolver obligatoriamente los siguientes errores, en las siguientes situaciones:
+La p'agina de [OpenGroup](https://pubs.opengroup.org/onlinepubs/007904975/functions/ftok.html) establece que debe devolver obligatoriamente los siguientes errores, en las siguientes situaciones:
 
 [EACCES]
 : Search permission is denied for a component of the path prefix.
-**Traducci'on**: _alg'un componente de la ruta especificada en el argumento no puede resolverse por falta de los permisos necesarios [como `rx`]_.
+: [**Traducción**] _Alg'un componente de la ruta especificada en el argumento no puede resolverse por falta de los permisos necesarios (como `rx`, por ejemplo)_.
 
 [ELOOP]
-: A loop exists in symbolic links encountered during resolution of the path argument. **Traducci'on**: _la resoluci'on de la ruta contiene un enlace simb'olico que conduce a un ciclo infinito [un enlace que apunta a si mismo, o a un directorio que contiene al mismo enlace]_.
+: A loop exists in symbolic links encountered during resolution of the path argument. 
+: [**Traducción**] _La resoluci'on de la ruta contiene un enlace simb'olico que conduce a un ciclo infinito (un enlace que apunta a si mismo, o a un directorio que contiene al mismo enlace)_.
 
 [ENAMETOOLONG]
-: The length of the path argument exceeds `{PATH_MAX}` or a pathname component is longer than `{NAME_MAX}`. **Traducci'on**: _la ruta, o un componente de la misma, es demasiado largo(a)_.
+: The length of the path argument exceeds `{PATH_MAX}` or a pathname component is longer than `{NAME_MAX}`. 
+: [**Traducción**] _la ruta, o un componente de la misma, es demasiado largo(a)_.
 
 [ENOENT]
-: A component of path does not name an existing file or path is an empty string. **Traducci'on**: _la ruta es vac'ia, o un componente de la misma no existe_.
+: A component of path does not name an existing file or path is an empty string. 
+: [**Traducción**] _la ruta es vac'ia, o un componente de la misma no existe_.
 
 [ENOTDIR]
-: A component of the path prefix is not a directory. **Traducci'on**: _un prefijo de la ruta no es un directorio_.
+: A component of the path prefix is not a directory. 
+: [**Traducción**] _un prefijo de la ruta no es un directorio_.
 
 Adicionalmente, la funci'on `ftok()` _puede_ fallar en las siguiente situaciones:
 
 [ELOOP]
-: More than `{SYMLOOP_MAX}`` symbolic links were encountered during resolution of the path argument. **Traducci'on**: _demasiados enlaces simb'olicos en la resoluci'on de la ruta._
+: More than `{SYMLOOP_MAX}` symbolic links were encountered during resolution of the path argument. 
+: [**Traducción**] _demasiados enlaces simb'olicos en la resoluci'on de la ruta._
 
 [ENAMETOOLONG]
-: Pathname resolution of a symbolic link produced an intermediate result whose length exceeds `{PATH_MAX}`.  **Traducci'on**: _la ruta es un enlace simb'olico cuya resoluci'on contiene un componente que es demasiado largo_.
+: Pathname resolution of a symbolic link produced an intermediate result whose length exceeds `{PATH_MAX}`. 
+: [**Traducción**] _la ruta es un enlace simb'olico cuya resoluci'on contiene un componente que es demasiado largo_.
 
 Una buena pr'actica de programaci'on deber'ia contemplar estas situaciones y manejar los errores adecuadamente, por ejemplo mediante `switch/case`, o `if/else`.
 
 ### Un ejemplo sencillo.
 
+Como primer ejemplo, vamos a generar una clave IPC por medio de varios m'etodos:
+
+1. poniendo `path` como un directorio existente 
+2. poniendo `path` como un directorio que no exista
+3. poniendo `path` como la concatenaci'on de un directorio existente, y un archivo que no existe dentro de 'el.
+4. poniendo `path` como la concatenaci'on de un directorio existente, y un archivo existente dentro de 'el.
+5. poniendo `path` como una ruta v'alida, pero sin los necesarios permisos de lectura
+6. poniendo `path` como el directorio actual, por medio de tres maneras diferentes:
+    - escribiendo `"."`
+    - usando la funci'on GNU `get_current_dir_name`
+    - usando la funcion POSIX `getcwd`
+
+Los tres m'etodos especificados en (5), deber'ian producir la misma clave, pues se trata del mismo directorio.
+
+Para este ejercicio, se pide que se cree previamente un directorio, por ejemplo `/home/yoel/test/ipc`, que llamaremos `real_dir`, y se ponga dentro de 'el alg'un fichero, por ejemplo `1.txt`. La contatenaci'on de `<real_dir>/` y este nombre de fichero (e.g. `/home/yoel/test/ipc/1.txt`) se llamar'a `real_file`.
+
+- En el caso (1), el programa intentar'a la ruta del directorio mencionado como path.
+- En el caso (2), intentar'a `/home/nonexist`  (que probablemente no exista!)
+- En el caso (3), intentar'a `<real_dir>`, pero con un fichero no existente. Por ejemplo `/home/yoel/test/ipc/nofile.txt`. Esto deber'ia fallar.
+- En el caso (4), intentar'a `<real_file>`, lo cual deber'ia generar la clave correctamente.
+- En el caso (5), intentar'a `<real_file>`, pero antes quitar'a los permisos de lectura y ejecuci'n al directorio padre, lo cual impedir'a resolver correctamente la ruta del archivo, y producir'a un error.
+- En el caso (6), deber'ia generarse la misma clave en los tres sub-casos.
+
+El programa se puede conseguir, dentro de la ruta de este repositorio, en `/ipc/examples/ftok/src/ex-01.c`. Puede compilarlo desde la carpeta `/ipc/examples/ftok/src` con:
+
+```bash
+gcc -W -std=c99 -o ex-01 src/ex-01.c && ./ex-01
+```
+
+La salida es:
+
+```
+* Case 1: existing directory: '/home/yoel/test/ipc' ...
+The key is: 1131 (0x173ad1b0)
+
+* Case 2: non-existing directory: '/home/nonexist' ...
+ftok: No such file or directory
+
+* Case 3: existing directory / non-existing file: '/home/yoel/test/ipc/nofile.txt' ...
+ftok: No such file or directory
+
+* Case 4: existing directory / existing file: '/home/yoel/test/ipc/1.txt' ...
+The key is: 4577 (0x173ad1b0)
+
+* Case 5: existing directory / existing file, but with no permissions: '/home/yoel/test/ipc/1.txt' ...
+ftok: Permission denied
+
+* Case 6a: current directory, using "." ...
+The key is: 594 (0x173ad1b0)
+
+* Case 6b: current directory, from `get_current_dir_name`: '/home/yoel/projects/LINUX_learning/ipc/examples/ftok' ...
+The key is: 594 (0x173ad1b0)
+
+* Case 6c: current directory, from `getcwd`: '/home/yoel/projects/LINUX_learning/ipc/examples/ftok' ...
+The key is: 594 (0x173ad1b0)
+```
