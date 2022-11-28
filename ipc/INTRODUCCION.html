@@ -1146,12 +1146,13 @@ key_t ftok(const char *pathname, int proj_id);
 <dd>[<strong>Traducción</strong>] <em>la ruta es un enlace simb&rsquo;olico cuya resoluci&rsquo;on contiene un componente que es demasiado largo</em>.</dd>
 </dl>
 <p>Una buena pr&rsquo;actica de programaci&rsquo;on deber&rsquo;ia contemplar estas situaciones y manejar los errores adecuadamente, por ejemplo mediante <code>switch/case</code>, o <code>if/else</code>.</p>
-<h3 id="un-ejemplo-sencillo">Un ejemplo sencillo.<a class="headerlink" href="#un-ejemplo-sencillo" title="Permanent link"></a></h3>
+<h3 id="un-ejemplo-sencillo-ipcexamplesftoksrcex-01c">Un ejemplo sencillo: <code>ipc/examples/ftok/src/ex-01.c</code><a class="headerlink" href="#un-ejemplo-sencillo-ipcexamplesftoksrcex-01c" title="Permanent link"></a></h3>
 <p>Como primer ejemplo, vamos a generar una clave IPC por medio de varios m&rsquo;etodos:</p>
 <ol>
 <li>poniendo <code>path</code> como un directorio existente </li>
 <li>poniendo <code>path</code> como un directorio que no exista</li>
 <li>poniendo <code>path</code> como la concatenaci&rsquo;on de un directorio existente, y un archivo que no existe dentro de &lsquo;el.</li>
+<li>poniendo <code>path</code> como la concatenaci&rsquo;on de un directorio existente, y un archivo existente dentro de &lsquo;el.</li>
 <li>poniendo <code>path</code> como una ruta v&rsquo;alida, pero sin los necesarios permisos de lectura</li>
 <li>poniendo <code>path</code> como el directorio actual, por medio de tres maneras diferentes:<ul>
 <li>escribiendo <code>"."</code></li>
@@ -1160,6 +1161,87 @@ key_t ftok(const char *pathname, int proj_id);
 </ul>
 </li>
 </ol>
+<p>Los tres m&rsquo;etodos especificados en (5), deber&rsquo;ian producir la misma clave, pues se trata del mismo directorio.</p>
+<p>Para este ejercicio, se pide que se cree previamente un directorio, por ejemplo <code>/home/yoel/test/ipc</code>, que llamaremos <code>real_dir</code>, y se ponga dentro de &lsquo;el alg&rsquo;un fichero, por ejemplo <code>1.txt</code>. La contatenaci&rsquo;on de <code>&lt;real_dir&gt;/</code> y este nombre de fichero (e.g. <code>/home/yoel/test/ipc/1.txt</code>) se llamar&rsquo;a <code>real_file</code>.</p>
+<ul>
+<li>En el caso (1), el programa intentar&rsquo;a la ruta del directorio mencionado como path.</li>
+<li>En el caso (2), intentar&rsquo;a <code>/home/nonexist</code>  (que probablemente no exista!)</li>
+<li>En el caso (3), intentar&rsquo;a <code>&lt;real_dir&gt;</code>, pero con un fichero no existente. Por ejemplo <code>/home/yoel/test/ipc/nofile.txt</code>. Esto deber&rsquo;ia fallar.</li>
+<li>En el caso (4), intentar&rsquo;a <code>&lt;real_file&gt;</code>, lo cual deber&rsquo;ia generar la clave correctamente.</li>
+<li>En el caso (5), intentar&rsquo;a <code>&lt;real_file&gt;</code>, pero antes quitar&rsquo;a los permisos de lectura y ejecuci&rsquo;n al directorio padre, lo cual impedir&rsquo;a resolver correctamente la ruta del archivo, y producir&rsquo;a un error.</li>
+<li>En el caso (6), deber&rsquo;ia generarse la misma clave en los tres sub-casos.</li>
+</ul>
+<p>El programa se puede conseguir, dentro de la ruta de este repositorio, en <code>/ipc/examples/ftok/src/ex-01.c</code>. Puede compilarlo desde la carpeta <code>/ipc/examples/ftok/src</code> con:</p>
+<div class="highlight"><pre>gcc -W -std<span class="o">=</span>c99 -o ex-01 src/ex-01.c <span class="o">&amp;&amp;</span> ./ex-01
+</pre></div>
+
+<p>La salida es:</p>
+<div class="highlight"><pre>* Case 1: existing directory: &#39;/home/yoel/test/ipc&#39; ...
+The key is: 1131 (0x173ad1b0)
+
+* Case 2: non-existing directory: &#39;/home/nonexist&#39; ...
+ftok: No such file or directory
+
+* Case 3: existing directory / non-existing file: &#39;/home/yoel/test/ipc/nofile.txt&#39; ...
+ftok: No such file or directory
+
+* Case 4: existing directory / existing file: &#39;/home/yoel/test/ipc/1.txt&#39; ...
+The key is: 4577 (0x173ad1b0)
+
+* Case 5: existing directory / existing file, but with no permissions: &#39;/home/yoel/test/ipc/1.txt&#39; ...
+ftok: Permission denied
+
+* Case 6a: current directory, using &quot;.&quot; ...
+The key is: 594 (0x173ad1b0)
+
+* Case 6b: current directory, from `get_current_dir_name`: &#39;/home/yoel/projects/LINUX_learning/ipc/examples/ftok&#39; ...
+The key is: 594 (0x173ad1b0)
+
+* Case 6c: current directory, from `getcwd`: &#39;/home/yoel/projects/LINUX_learning/ipc/examples/ftok&#39; ...
+The key is: 594 (0x173ad1b0)
+</pre></div>
+
+<h3 id="otro-ejemplo-ipcexamplesftoksrcex-02c">Otro ejemplo: <code>ipc/examples/ftok/src/ex-02.c</code><a class="headerlink" href="#otro-ejemplo-ipcexamplesftoksrcex-02c" title="Permanent link"></a></h3>
+<p>En el ejemplo anterior, confiamos en los mensajes de error del sistema, mediante la orden:</p>
+<div class="highlight"><pre><span class="n">perror</span><span class="p">(</span><span class="s">&quot;ftok&quot;</span><span class="p">);</span>
+</pre></div>
+
+<p>para saber cu&rsquo;al ha sido el error. Mediante la documentaci&rsquo;on de <code>ftok</code> podemos saber no obstante la causa m&rsquo;as espec&rsquo;ifica, y con ella construir una funci&rsquo;on m&rsquo;as especializada en el tratamiento del error.</p>
+<div class="highlight"><pre><span class="kt">void</span> <span class="nf">getkey</span><span class="p">(</span><span class="k">const</span> <span class="kt">char</span> <span class="o">*</span><span class="n">path</span><span class="p">,</span> <span class="k">const</span> <span class="kt">int</span> <span class="n">id</span><span class="p">)</span> 
+<span class="p">{</span>
+    <span class="kt">key_t</span> <span class="n">key</span><span class="p">;</span>
+
+    <span class="n">key</span> <span class="o">=</span> <span class="n">ftok</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">id</span><span class="p">);</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">key</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span> <span class="p">{</span>
+        <span class="n">printf</span><span class="p">(</span><span class="s">&quot;The key is: %d (0x%x)</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">);</span>
+    <span class="p">}</span> <span class="k">else</span> <span class="p">{</span>
+        <span class="k">switch</span> <span class="p">(</span><span class="n">errno</span><span class="p">)</span> <span class="p">{</span>
+        <span class="k">case</span> <span class="nl">EACCES</span><span class="p">:</span>
+            <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;ftok [EACCES, %d]: Search permission is denied&quot;</span>
+                <span class="s">&quot; for a component of the path prefix.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">errno</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="nl">ELOOP</span><span class="p">:</span>
+            <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;ftok [ELOOP, %d]: An infinite symbolic loop,&quot;</span>
+                <span class="s">&quot; or too many symbolic links, were encountered during&quot;</span>
+                <span class="s">&quot; path resolution.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">errno</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="nl">ENAMETOOLONG</span><span class="p">:</span>
+            <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;ftok [ENAMETOOLONG, %d]: The path, or one of its components,&quot;</span>
+                <span class="s">&quot; is too long (PATH_MAX, NAME_MAX).</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">errno</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="nl">ENOENT</span><span class="p">:</span>
+            <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;ftok [ENOENT, %d]: A component of path does not name an&quot;</span>
+            <span class="s">&quot; existing file, or path is an empty string.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">errno</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="k">case</span> <span class="nl">ENOTDIR</span><span class="p">:</span>
+            <span class="n">fprintf</span><span class="p">(</span><span class="n">stderr</span><span class="p">,</span> <span class="s">&quot;ftok [ENOTDIR, %d]: A component of the path prefix is not&quot;</span>
+                <span class="s">&quot; a directory.</span><span class="se">\n</span><span class="s">&quot;</span><span class="p">,</span> <span class="n">errno</span><span class="p">);</span>
+            <span class="k">break</span><span class="p">;</span>
+        <span class="p">}</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
 <div class="footnote">
 <hr />
 <ol>

@@ -1,5 +1,5 @@
 /**
- * EX_01_C_
+ * EX_02_C_
  * This example will create a key for a new IPC object.
  *
  * We will examine several cases, with and without errors:
@@ -11,10 +11,13 @@
  * - an existing directory, but with no permissions to read/execute
  * - the current directory (in two different ways)
  *
+ * This example is similar to ex-01.c, but now discriminating the 
+ * error cases in `ftok()`.
+ * 
  * Compile with (from the parent directory of src)
  * =====================================================
  *
- * gcc -W -std=c99 -o ex-01 src/ex-01.c
+ * gcc -W -std=c99 -o ex-02 src/ex-02.c
  *
  * LICENSE (MIT)
  * ==============
@@ -51,6 +54,9 @@
  * On success, this will print the generated key.
  * On failure, it will simply print an error message using `perror()`,
  * but no extra-effort will be done to discriminate the error cause.
+ *
+ * Error descriptions are based on:
+ * https://pubs.opengroup.org/onlinepubs/007904975/functions/ftok.html
  * 
  * @param  path  the path name (as in the `ftok()` function)
  * @param  id    the project id
@@ -63,7 +69,32 @@ void getkey(const char *path, const int id)
 	if (key >= 0) {
 		printf("The key is: %d (0x%x)\n");
 	} else {
-		perror("ftok");
+		switch (errno) {
+		case EACCES:
+			fprintf(stderr, "ftok [EACCES, %d]: Search permission is denied"
+				" for a component of the path prefix.\n", errno);
+			break;
+		case ELOOP:
+			fprintf(stderr, "ftok [ELOOP, %d]: An infinite symbolic loop,"
+				" or too many symbolic links, were encountered during"
+				" path resolution.\n", errno);
+			break;
+		case ENAMETOOLONG:
+			fprintf(stderr, "ftok [ENAMETOOLONG, %d]: The path, or one of its components,"
+				" is too long (PATH_MAX, NAME_MAX).\n", errno);
+			break;
+		case ENOENT:
+			fprintf(stderr, "ftok [ENOENT, %d]: A component of path does not name an"
+			" existing file, or path is an empty string.\n", errno);
+			break;
+		case ENOTDIR:
+			fprintf(stderr, "ftok [ENOTDIR, %d]: A component of the path prefix is not"
+				" a directory.\n", errno);
+			break;
+		default:
+			// another error
+			perror("ftok");
+		}
 	}
 }
 

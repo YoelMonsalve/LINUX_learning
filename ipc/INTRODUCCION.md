@@ -112,7 +112,7 @@ Adicionalmente, la funci'on `ftok()` _puede_ fallar en las siguiente situaciones
 
 Una buena pr'actica de programaci'on deber'ia contemplar estas situaciones y manejar los errores adecuadamente, por ejemplo mediante `switch/case`, o `if/else`.
 
-### Un ejemplo sencillo.
+### Un ejemplo sencillo: `ipc/examples/ftok/src/ex-01.c`
 
 Como primer ejemplo, vamos a generar una clave IPC por medio de varios m'etodos:
 
@@ -170,3 +170,55 @@ The key is: 594 (0x173ad1b0)
 * Case 6c: current directory, from `getcwd`: '/home/yoel/projects/LINUX_learning/ipc/examples/ftok' ...
 The key is: 594 (0x173ad1b0)
 ```
+
+### Otro ejemplo: `ipc/examples/ftok/src/ex-02.c`
+
+En el ejemplo anterior, confiamos en los mensajes de error del sistema, mediante la orden:
+
+```C
+perror("ftok");
+```
+
+para saber cu'al ha sido el error. Mediante la documentaci'on de `ftok` podemos saber no obstante la causa m'as espec'ifica, y con ella construir una funci'on m'as especializada en el tratamiento del error.
+
+```C
+void getkey(const char *path, const int id) 
+{
+    key_t key;
+
+    key = ftok(path, id);
+    if (key >= 0) {
+        printf("The key is: %d (0x%x)\n");
+    } else {
+        switch (errno) {
+        case EACCES:
+            fprintf(stderr, "ftok [EACCES, %d]: Search permission is denied"
+                " for a component of the path prefix.\n", errno);
+            break;
+        case ELOOP:
+            fprintf(stderr, "ftok [ELOOP, %d]: An infinite symbolic loop,"
+                " or too many symbolic links, were encountered during"
+                " path resolution.\n", errno);
+            break;
+        case ENAMETOOLONG:
+            fprintf(stderr, "ftok [ENAMETOOLONG, %d]: The path, or one of its components,"
+                " is too long (PATH_MAX, NAME_MAX).\n", errno);
+            break;
+        case ENOENT:
+            fprintf(stderr, "ftok [ENOENT, %d]: A component of path does not name an"
+            " existing file, or path is an empty string.\n", errno);
+            break;
+        case ENOTDIR:
+            fprintf(stderr, "ftok [ENOTDIR, %d]: A component of the path prefix is not"
+                " a directory.\n", errno);
+            break;
+        }
+        default:
+            // another error
+            perror("ftok");
+    }
+}
+```
+
+La salida ser'a como la del ejemplo `ex-01.c`, pero con mensajes de error m'as espec'ificos.
+
